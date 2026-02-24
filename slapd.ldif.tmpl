@@ -38,7 +38,7 @@ objectClass: olcMdbConfig
 olcDatabase: mdb
 olcDbMaxSize: 1073741824
 olcSuffix: ${LDAP_SUFFIX}
-olcRootDN: cn=admin,${LDAP_SUFFIX}
+olcRootDN: cn=${ADMIN_COMMON_NAME},${LDAP_SUFFIX}
 olcRootPW: ${LDAP_SECRET}
 olcDbDirectory: /usr/local/var/openldap-data
 olcDbIndex: objectClass eq

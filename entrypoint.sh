@@ -15,6 +15,7 @@ fi
 export LDAP_SUFFIX=$(echo "$LDAP_DOMAIN" | sed -E 's/\.?([a-z0-9]+)\.?/dc=\1,/g' | head -c-2)
 export LDAP_SUFFIX=${LDAP_SUFFIX:-dn=example,dc=org}
 export LDAP_TOP_LEVEL=$(echo "$LDAP_SUFFIX" | sed -r 's/^dc\=([a-zA-Z0-9]+).*/\1/')
+export ADMIN_COMMON_NAME=${ADMIN_COMMON_NAME:-admin}
 export LDAP_SECRET=$(slappasswd -s ${ADMIN_PASSWORD:-password})
 export ORGANIZATION_NAME=${ORGANIZATION_NAME:-"Example Company"}
 

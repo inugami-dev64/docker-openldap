@@ -1,0 +1,14 @@
+dn: ${LDAP_SUFFIX}
+objectClass: top
+objectClass: dcObject
+objectClass: organization
+o: ${ORGANIZATION_NAME}
+dc: ${LDAP_TOP_LEVEL}
+
+dn: ou=people,${LDAP_SUFFIX}
+objectClass: organizationalUnit
+ou: people
+
+dn: ou=groups,${LDAP_SUFFIX}
+objectClass: organizationalUnit
+ou: groups

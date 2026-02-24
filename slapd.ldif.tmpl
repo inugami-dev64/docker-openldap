@@ -1,0 +1,50 @@
+dn: cn=config
+objectClass: olcGlobal
+cn: config
+# TLS configuration, when enabled
+${TLS_COMMENT}olcTLSCertificateFile: /etc/letsencrypt/live/${LETSENCRYPT_DOMAIN}/fullchain.pem
+${TLS_COMMENT}olcTLSCertificateKeyFile: /etc/letsencrypt/live/${LETSENCRYPT_DOMAIN}/privkey.pem
+olcArgsFile: /usr/local/var/run/slapd.args
+olcPidFile: /usr/local/var/run/slapd.pid
+
+dn: cn=module,cn=config
+objectClass: olcModuleList
+cn: module
+olcModulepath:  /usr/local/libexec/openldap
+olcModuleload:  back_mdb.la
+
+dn: cn=schema,cn=config
+objectClass: olcSchemaConfig
+cn: schema
+
+include: file:///usr/local/etc/openldap/schema/core.ldif
+
+include: file:///usr/local/etc/openldap/schema/cosine.ldif
+
+include: file:///usr/local/etc/openldap/schema/nis.ldif
+
+include: file:///usr/local/etc/openldap/schema/inetorgperson.ldif
+
+include: file:///usr/local/etc/openldap/schema/postfix-book.ldif
+
+dn: olcDatabase=frontend,cn=config
+objectClass: olcDatabaseConfig
+objectClass: olcFrontendConfig
+olcDatabase: frontend
+
+dn: olcDatabase=mdb,cn=config
+objectClass: olcDatabaseConfig
+objectClass: olcMdbConfig
+olcDatabase: mdb
+olcDbMaxSize: 1073741824
+olcSuffix: ${LDAP_SUFFIX}
+olcRootDN: cn=admin,${LDAP_SUFFIX}
+olcRootPW: ${LDAP_SECRET}
+olcDbDirectory: /usr/local/var/openldap-data
+olcDbIndex: objectClass eq
+
+dn: olcDatabase=monitor,cn=config
+objectClass: olcDatabaseConfig
+olcDatabase: monitor
+olcRootDN: cn=config
+olcMonitoring: FALSE

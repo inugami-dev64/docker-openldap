@@ -82,14 +82,20 @@ RUN make install
 
 FROM docker.io/alpine:3.22 AS openldap
 
+RUN apk add envsubst
+
 COPY --from=builder /usr/local/bin /usr/local/bin
 COPY --from=builder /usr/local/sbin /usr/local/sbin
 COPY --from=builder /usr/local/libexec /usr/local/libexec
 COPY --from=builder /usr/local/etc /usr/local/etc
+COPY postfix-book.ldif /usr/local/etc/openldap/schema
 
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY slapd.ldif.tmpl /usr/local/etc/openldap
+COPY init.ldif.tmpl /usr/local/etc/openldap
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-RUN mkdir -p /usr/local/var/openldap-data /usr/local/etc/slapd.d
+RUN mkdir -p /usr/local/var/openldap-data /usr/local/etc/slapd.d /usr/local/var/run
+RUN chmod 700 /usr/local/var/openldap-data
 
 ENTRYPOINT [ "/usr/local/bin/entrypoint.sh" ]

@@ -1,45 +1,55 @@
 #!/bin/sh
-LMDB_DIR=/usr/local/var/openldap-data
-CONFIG_DIR=/usr/local/etc/slapd.d
-CONFIG_FILE_DIR=/usr/local/etc/openldap
+source .
 
 # Export all relevant environment variables
-# that the configuration is going to use
-export LETSENCRYPT_DOMAIN=${LETSENCRYPT_DOMAIN:-}
-tls_comment=
-if [ "${LETSENCRYPT_DOMAIN}" == '' ]; then
-    export TLS_COMMENT='# '
+# that are going to be used by envsubst for templates
+export OPENLDAP_VOL_DIR=${OPENLDAP_VOL_DIR:-}
+export OPENLDAP_TLS_CERT_FILE=${OPENLDAP_TLS_CERT_FILE:-}
+export OPENLDAP_TLS_CERT_KEY_FILE=${OPENLDAP_TLS_CERT_KEY_FILE:-}
+if [ ! -f ${OPENLDAP_TLS_CERT_FILE} ] || [ ! -f ${OPENLDAP_TLS_CERT_KEY_FILE} ]; then
+    export OPENLDAP_TLS_COMMENT='# '
 else
-    export TLS_COMMENT=
+    export OPENLDAP_TLS_COMMENT=
 fi
-export LDAP_SUFFIX=$(echo "$LDAP_DOMAIN" | sed -E 's/\.?([a-z0-9]+)\.?/dc=\1,/g' | head -c-2)
-export LDAP_SUFFIX=${LDAP_SUFFIX:-dn=example,dc=org}
-export LDAP_TOP_LEVEL=$(echo "$LDAP_SUFFIX" | sed -r 's/^dc\=([a-zA-Z0-9]+).*/\1/')
-export ADMIN_COMMON_NAME=${ADMIN_COMMON_NAME:-admin}
-export LDAP_SECRET=$(slappasswd -s ${ADMIN_PASSWORD:-password})
-export ORGANIZATION_NAME=${ORGANIZATION_NAME:-"Example Company"}
+export OPENLDAP_DOMAIN="$(echo "$OPENLDAP_DOMAIN" | sed -E 's/\.?([a-z0-9]+)\.?/dc=\1,/g' | head -c-2)"
+export OPENLDAP_DOMAIN=${OPENLDAP_DOMAIN:-dc=example,dc=org}
+export OPENLDAP_TOP_LEVEL="$(echo "$OPENLDAP_DOMAIN" | sed -r 's/^dc\=([a-zA-Z0-9]+).*/\1/')"
+export OPENLDAP_ADMIN_CN=${OPENLDAP_ADMIN_CN:-admin}
+export OPENLDAP_ADMIN_PASSWD_RAW=${OPENLDAP_ADMIN_PASSWD:-password}
+export OPENLDAP_ADMIN_PASSWD="$(slappasswd -s "$OPENLDAP_ADMIN_PASSWD_RAW")"
+export OPENLDAP_ORGANIZATION=${OPENLDAP_ORGANIZATION:-"Example Company"}
+export OPENLDAP_CONF_DIR=/usr/local/etc/openldap
+
+OPENLDAP_SLAPD_CONF_DIR=${OPENLDAP_VOL_DIR}/etc/slapd
+
+# Create directories if they don't already exist
+mkdir -p ${OPENLDAP_SLAPD_CONF_DIR} ${OPENLDAP_VOL_DIR}/lmdb
+if [ $? -ne 0 ]; then
+    echo "Failed to create required data and configuration directories"
+    exit 127
+fi
 
 INITIALIZE_DOMAIN=0
 
 # Check if configuration database is empty, and if it is
 # then generate and import the configuration
-if [ -z "$(ls -A $CONFIG_DIR)" ]; then
-    envsubst < $CONFIG_FILE_DIR/slapd.ldif.tmpl > $CONFIG_FILE_DIR/slapd.ldif
-    envsubst < $CONFIG_FILE_DIR/init.ldif.tmpl > $CONFIG_FILE_DIR/init.ldif
-    slapadd -n 0 -F $CONFIG_DIR -l $CONFIG_FILE_DIR/slapd.ldif
+if [ -z "$(ls -A ${OPENLDAP_SLAPD_CONF_DIR})" ]; then
+    envsubst < ${OPENLDAP_SLAPD_CONF_TMPL_DIR}/slapd.ldif.tmpl > ${OPENLDAP_SLAPD_CONF_DIR}/slapd.ldif
+    envsubst < ${OPENLDAP_SLAPD_CONF_TMPL_DIR}/init.ldif.tmpl > ${OPENLDAP_SLAPD_CONF_DIR}/init.ldif
+    slapadd -n 0 -F ${OPENLDAP_SLAPD_CONF_DIR} -l ${OPENLDAP_SLAPD_CONF_DIR}/slapd.ldif
     INITIALIZE_DOMAIN=1
 fi
 
 # Start SLAPD
-echo "slapd starting..."
-/usr/local/libexec/slapd -d 0 -F $CONFIG_DIR &
+echo "Starting slapd..."
+/usr/local/libexec/slapd -F ${OPENLDAP_SLAPD_CONF_DIR} -d0 &
 
-# If domain directory initialization is required
+# If directory initialization is required
 # perform ldapadd
-if [ ! $INITIALIZE_DOMAIN == 0 ]; then
+if [ $INITIALIZE_DOMAIN -ne 0 ]; then
     echo "Initializing organization database..."
     sleep 2
-    ldapadd -x -D "cn=admin,${LDAP_SUFFIX}" -w "${ADMIN_PASSWORD}" -f $CONFIG_FILE_DIR/init.ldif
+    ldapadd -x -D "cn=${OPENLDAP_ADMIN_CN},${OPENLDAP_DOMAIN}" -w "${OPENLDAP_ADMIN_PASSWD_RAW}" -f ${OPENLDAP_SLAPD_CONF_DIR}/init.ldif
     echo "Organization initialization done..."
 fi
 

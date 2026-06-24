@@ -6,28 +6,44 @@ In this configuration, the OpenLDAP server is mainly meant for keeping track of 
 
 ## Getting started
 
-First you should build and tag the container. By default, the included [Containerfile](Containerfile) compiles OpenLDAP version 2.6.12.
+First you should build and tag the container. By default, the included [Containerfile](Containerfile) compiles OpenLDAP version 2.6.13.
 ```sh
-$ docker build -t registry.example.com/openldap:2.6.12 . -f Containerfile
+$ docker build -t registry.example.com/openldap:2.6.13 . -f Dockerfile
 ```
 
 After the container building has finished, you can spin up the container using following commands:
 ```sh
 $ docker run \
     -p 127.0.0.1:389:389 \
-    -v ./_volume/openldap/config:/usr/local/etc/slapd.d \
-    -v ./_volume/openldap/data:/usr/local/var/openldap-data \
-    -e LDAP_DOMAIN=example.org \
-    -e ADMIN_COMMON_NAME=admin \
-    -e ADMIN_PASSWORD=<password> \
-    -e ORGANIZATION_NAME="My awesome organization" \
-    registry.example.com/openldap:2.6.12
+    -v ./_volume/openldap:/var/lib/openldap \
+    -e OPENLDAP_LDAP_DOMAIN=example.org \
+    -e OPENLDAP_ADMIN_CN=admin \
+    -e OPENLDAP_ADMIN_PASSWD=<password> \
+    -e OPENLDAP_ORGANIZATION="My awesome organization" \
+    registry.example.com/openldap:2.6.13
+```
+
+Alternatively for running in TLS mode:
+```sh
+$ docker run \
+    -p 127.0.0.1:389:389 \
+    -v ./_volume/openldap:/var/lib/openldap \
+    -v ./_volume/certs:/etc/certs/ldap:ro \
+    -e OPENLDAP_TLS_CERT_FILE=/etc/certs/ldap/fullchain.pem \
+    -e OPENLDAP_TLS_CERT_KEY_FILE=/etc/certs/ldap/privkey.pem \
+    -e OPENLDAP_LDAP_DOMAIN=example.org \
+    -e OPENLDAP_ADMIN_CN=admin \
+    -e OPENLDAP_ADMIN_PASSWD=<password> \
+    -e OPENLDAP_ORGANIZATION="My awesome organization" \
+    registry.example.com/openldap:2.6.13
 ```
 
 List of possible environment variables is as follows:
-- `LDAP_DOMAIN` specifies the domain to use, when setting up the directory. For instance, when setting it to `example.org`, the distinguished name for your organization would become `dc=example,dc=org`
-- `ADMIN_COMMON_NAME` specifies the administrator (root user's) common name part (by default set to: admin)
-- `ADMIN_PASSWORD` specifies the administrator user's password
-- `ORGANIZATION_NAME` specifies the organization name part of the organization domain entry.
+- `OPENLDAP_DOMAIN` specifies the domain name to use, in hostname notation (by default: `example.org`);
+- `OPENLDAP_ADMIN_CN` common name for the root user (by default: `admin`);
+- `OPENLDAP_ADMIN_PASSWD` password for the root user (by default: `password`);
+- `OPENLDAP_ORGANIZATION` name of the organization in its domain entry (by default: `Example Organization`).
+- `OPENLDAP_TLS_CERT_FILE` path to the TLS certificate file
+- `OPENLDAP_TLS_CERT_KEY_FILE` path to the TLS certificate key file.
 
-For volumes, `/usr/local/etc/slapd.d` specifies the DIT database location for OpenLDAP configuration and `/usr/local/var/openldap-data` specifies the location to MDB database.
+Container runs `slapd` with uid/gid of 101, so make sure that volumes have appropriate permissions.

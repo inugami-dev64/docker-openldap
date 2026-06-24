@@ -2,30 +2,26 @@ dn: cn=config
 objectClass: olcGlobal
 cn: config
 # TLS configuration, when enabled
-${TLS_COMMENT}olcTLSCertificateFile: /etc/letsencrypt/live/${LETSENCRYPT_DOMAIN}/fullchain.pem
-${TLS_COMMENT}olcTLSCertificateKeyFile: /etc/letsencrypt/live/${LETSENCRYPT_DOMAIN}/privkey.pem
-olcArgsFile: /usr/local/var/run/slapd.args
-olcPidFile: /usr/local/var/run/slapd.pid
+${OPENLDAP_TLS_COMMENT}olcTLSCertificateFile: ${OPENLDAP_TLS_CERT_FILE}
+${OPENLDAP_TLS_COMMENT}olcTLSCertificateKeyFile: ${OPENLDAP_TLS_CERT_KEY_FILE}
+olcArgsFile: /tmp/slapd.args
+olcPidFile: /tmp/slapd.pid
 
 dn: cn=module,cn=config
 objectClass: olcModuleList
 cn: module
-olcModulepath:  /usr/local/libexec/openldap
-olcModuleload:  back_mdb.la
+olcModulepath: /usr/local/libexec/openldap
+olcModuleload: back_mdb.la
 
 dn: cn=schema,cn=config
 objectClass: olcSchemaConfig
 cn: schema
 
-include: file:///usr/local/etc/openldap/schema/core.ldif
-
-include: file:///usr/local/etc/openldap/schema/cosine.ldif
-
-include: file:///usr/local/etc/openldap/schema/nis.ldif
-
-include: file:///usr/local/etc/openldap/schema/inetorgperson.ldif
-
-include: file:///usr/local/etc/openldap/schema/postfix-book.ldif
+include: file://${OPENLDAP_CONF_DIR}/schema/core.ldif
+include: file://${OPENLDAP_CONF_DIR}/schema/cosine.ldif
+include: file://${OPENLDAP_CONF_DIR}/schema/nis.ldif
+include: file://${OPENLDAP_CONF_DIR}/schema/inetorgperson.ldif
+include: file://${OPENLDAP_CONF_DIR}/schema/postfix-book.ldif
 
 dn: olcDatabase=frontend,cn=config
 objectClass: olcDatabaseConfig
@@ -37,10 +33,10 @@ objectClass: olcDatabaseConfig
 objectClass: olcMdbConfig
 olcDatabase: mdb
 olcDbMaxSize: 1073741824
-olcSuffix: ${LDAP_SUFFIX}
-olcRootDN: cn=${ADMIN_COMMON_NAME},${LDAP_SUFFIX}
-olcRootPW: ${LDAP_SECRET}
-olcDbDirectory: /usr/local/var/openldap-data
+olcSuffix: ${OPENLDAP_DOMAIN}
+olcRootDN: cn=${OPENLDAP_ADMIN_CN},${OPENLDAP_DOMAIN}
+olcRootPW: ${OPENLDAP_ADMIN_PASSWD}
+olcDbDirectory: ${OPENLDAP_VOL_DIR}/lmdb
 olcDbIndex: objectClass eq
 
 dn: olcDatabase=monitor,cn=config

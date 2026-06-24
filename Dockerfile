@@ -1,6 +1,6 @@
 FROM docker.io/alpine:3.22 AS builder
 
-ARG VERSION=2.6.12
+ARG VERSION=2.6.13
 
 RUN apk add build-base \
             cyrus-sasl-static \
@@ -84,18 +84,34 @@ FROM docker.io/alpine:3.22 AS openldap
 
 RUN apk add envsubst
 
+# Where should data and configuration files reside
+ARG OPENLDAP_VOL_DIR=/var/lib/openldap
+ENV OPENLDAP_VOL_DIR=${OPENLDAP_VOL_DIR}
+
+ARG OPENLDAP_SLAPD_CONF_TMPL_DIR=/usr/local/etc/slapd
+ENV OPENLDAP_SLAPD_CONF_TMPL_DIR=${OPENLDAP_SLAPD_CONF_TMPL_DIR}
+
 COPY --from=builder /usr/local/bin /usr/local/bin
 COPY --from=builder /usr/local/sbin /usr/local/sbin
 COPY --from=builder /usr/local/libexec /usr/local/libexec
 COPY --from=builder /usr/local/etc /usr/local/etc
 COPY postfix-book.ldif /usr/local/etc/openldap/schema
+RUN chmod 444 /usr/local/etc/openldap/schema/postfix-book.ldif
 
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-COPY slapd.ldif.tmpl /usr/local/etc/openldap
-COPY init.ldif.tmpl /usr/local/etc/openldap
+COPY slapd.ldif.tmpl ${OPENLDAP_SLAPD_CONF_TMPL_DIR}/slapd.ldif.tmpl
+COPY init.ldif.tmpl ${OPENLDAP_SLAPD_CONF_TMPL_DIR}/init.ldif.tmpl
 RUN chmod +x /usr/local/bin/entrypoint.sh
+RUN chmod 444 \
+    ${OPENLDAP_SLAPD_CONF_TMPL_DIR}/slapd.ldif.tmpl \
+    ${OPENLDAP_SLAPD_CONF_TMPL_DIR}/init.ldif.tmpl
 
-RUN mkdir -p /usr/local/var/openldap-data /usr/local/etc/slapd.d /usr/local/var/run
-RUN chmod 700 /usr/local/var/openldap-data
+RUN mkdir -p ${OPENLDAP_VOL_DIR}/lmdb ${OPENLDAP_VOL_DIR}/etc/slapd
+RUN chmod 0700 ${OPENLDAP_VOL_DIR}/lmdb
+RUN chmod 0755 ${OPENLDAP_VOL_DIR}/etc/slapd
+RUN chown -R 101:101 ${OPENLDAP_VOL_DIR}
 
-ENTRYPOINT [ "/usr/local/bin/entrypoint.sh" ]
+# Run container as specified user
+USER 101:101
+
+CMD [ "/usr/local/bin/entrypoint.sh" ]
